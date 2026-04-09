@@ -52,18 +52,17 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
 .rcard-label { font-size: 11px; color: #bbb; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 7px; }
 .rcard-body { font-size: 14px; color: #222; line-height: 1.65; }
 .rcard-body.muted { font-style: italic; color: #888; font-size: 13px; }
+.analysis-toggle { background: none; border: none; font-size: 12px; color: #bbb; cursor: pointer; align-self: flex-start; padding: 0 0 8px 2px; display: none; }
+.analysis-toggle:hover { color: #888; }
 .sms-title { font-size: 11px; color: #bbb; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 8px; width: 100%; }
 .sms-opt { width: 100%; background: #fff; border: 1px solid #eee; border-radius: 12px; padding: 12px 14px; margin-bottom: 8px; cursor: pointer; text-align: left; font-size: 14px; color: #222; line-height: 1.5; font-family: inherit; }
 .sms-opt.chosen { border-color: #1D9E75; background: #E1F5EE; color: #085041; }
 .sent-confirm { font-size: 13px; color: #0F6E56; font-weight: 600; text-align: center; margin-top: 4px; width: 100%; }
-
-/* INBOX */
 .inbox-screen { align-items: flex-start; }
 .inbox-header { width: 100%; display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
 .inbox-title { font-size: 18px; font-weight: 700; color: #111; }
 .inbox-count { font-size: 12px; font-weight: 600; background: #E24B4A; color: #fff; border-radius: 10px; padding: 2px 8px; }
-.msg-card { width: 100%; background: #fff; border: 1px solid #eee; border-radius: 14px; padding: 12px 14px; margin-bottom: 8px; cursor: pointer; transition: border-color 0.15s; }
-.msg-card:active { border-color: #1D9E75; background: #f8fffc; }
+.msg-card { width: 100%; background: #fff; border: 1px solid #eee; border-radius: 14px; padding: 12px 14px; margin-bottom: 8px; cursor: pointer; }
 .msg-card.urgent { border-left: 3px solid #E24B4A; border-radius: 0 14px 14px 0; }
 .msg-card.new-msg { border-left: 3px solid #1D9E75; border-radius: 0 14px 14px 0; }
 .msg-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
@@ -134,13 +133,19 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
       <div><div class="header-name">Juhani Korhonen</div><div class="header-time">Uusi asiakasviesti — juuri nyt</div></div>
     </div>
     <div class="priority-badge" id="r-badge"></div>
-    <div class="rcard"><div class="rcard-label">AI-tiivistelmä</div><div class="rcard-body" id="r-summary"></div></div>
-    <div class="rcard"><div class="rcard-label">Alkuperäinen puheviesti</div><div class="rcard-body muted" id="r-transcript"></div></div>
+    <div class="rcard">
+      <div class="rcard-label">Tiivistelmä</div>
+      <div class="rcard-body" id="r-summary"></div>
+    </div>
+    <button class="analysis-toggle" id="btn-analysis">▶ Näytä vika-analyysi</button>
     <div class="rcard" id="r-analysis-card" style="display:none;">
-      <div class="rcard-label">AI-vika-analyysi</div>
+      <div class="rcard-label">Vika-analyysi</div>
       <div class="rcard-body muted" id="r-analysis"></div>
     </div>
-    <button id="btn-toggle-analysis" style="background:none;border:none;font-size:12px;color:#aaa;cursor:pointer;align-self:flex-start;padding:0 0 10px 2px;display:none;" onclick="toggleAnalysis()">▶ Näytä vika-analyysi</button>
+    <div class="rcard">
+      <div class="rcard-label">Alkuperäinen puheviesti</div>
+      <div class="rcard-body muted" id="r-transcript"></div>
+    </div>
     <div class="sms-title">Vastaa yhdellä napilla</div>
     <div id="r-sms"></div>
     <div class="sent-confirm" id="r-sent" style="display:none;">Tekstiviesti lähetetty!</div>
@@ -168,65 +173,44 @@ const $ = id => document.getElementById(id);
 function show(id) { document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); $(id).classList.add('active'); }
 (function tick() { const n = new Date(); $('clock').textContent = n.getHours()+':'+String(n.getMinutes()).padStart(2,'0'); setTimeout(tick,10000); })();
 
-// Pre-filled demo messages — sorted urgent first, then by time
 const demoMessages = [
-  { name: 'Pekka Mäkinen', number: null, minsAgo: 12, priority: 'Kiireellinen', summary: 'Moottorivaroitusvalo syttyi ajossa ja auto tärisee pahasti. Volvo V70 2015. Pyytää lupaa tuoda auton heti tänään.', new: false },
-  { name: 'Sari Leinonen', number: null, minsAgo: 38, priority: 'Kiireellinen', summary: 'Jarrupoljin tuntuu pehmeältä ja jarrutusteho heikentynyt. Toyota Yaris 2018. Haluaa mahdollisimman pian tarkistukseen.', new: false },
-  { name: null, number: '+358 44 712 3890', minsAgo: 8, priority: 'Normaali', summary: 'Kysyy hintatietoja vuosihuollolle Skoda Octavia 2020. Pyytää tarjousta sähköpostiin.', new: false },
-  { name: 'Matti Virtanen', number: null, minsAgo: 55, priority: 'Normaali', summary: 'Haluaa varata ajan renkaanvaihtoon ja vuosihuoltoon. Ford Focus 2019. Toivoo aikaa tällä viikolla.', new: false },
-  { name: 'Liisa Korhonen', number: null, minsAgo: 67, priority: 'Normaali', summary: 'Tiedustelee milloin auton ilmastointi kannattaa huoltaa ennen kesää. Ei kiire.', new: false },
-  { name: null, number: '+358 50 334 7821', minsAgo: 72, priority: 'Normaali', summary: 'Kysyy onko käytettyä rengassarjaa saatavilla 205/55R16 kokoon. Haluaa edullisen vaihtoehdon.', new: false },
-  { name: 'Timo Hakkarainen', number: null, minsAgo: 89, priority: 'Normaali', summary: 'Pyytää katsastusvalmisteluaikaa seuraavalle viikolle. BMW 3-sarja 2016. Mainitsee että takavalo saattaa olla rikki.', new: false },
-  { name: 'Aino Nieminen', number: null, minsAgo: 103, priority: 'Normaali', summary: 'Soitti kysyäkseen auton noutamisesta. Sanoo auton olevan jo valmiina. Pyytää vahvistusta.', new: false },
+  { name: 'Pekka Mäkinen', number: null, minsAgo: 12, priority: 'Kiireellinen', summary: 'Moottorivaroitusvalo syttyi ajossa ja auto tärisee pahasti. Volvo V70 2015. Pyytää lupaa tuoda auton heti tänään.' },
+  { name: 'Sari Leinonen', number: null, minsAgo: 38, priority: 'Kiireellinen', summary: 'Jarrupoljin tuntuu pehmeältä ja jarrutusteho heikentynyt. Toyota Yaris 2018. Haluaa mahdollisimman pian tarkistukseen.' },
+  { name: null, number: '+358 44 712 3890', minsAgo: 8, priority: 'Normaali', summary: 'Kysyy hintatietoja vuosihuollolle Skoda Octavia 2020. Pyytää tarjousta sähköpostiin.' },
+  { name: 'Matti Virtanen', number: null, minsAgo: 55, priority: 'Normaali', summary: 'Haluaa varata ajan renkaanvaihtoon ja vuosihuoltoon. Ford Focus 2019. Toivoo aikaa tällä viikolla.' },
+  { name: 'Liisa Korhonen', number: null, minsAgo: 67, priority: 'Normaali', summary: 'Tiedustelee milloin auton ilmastointi kannattaa huoltaa ennen kesää. Ei kiire.' },
+  { name: null, number: '+358 50 334 7821', minsAgo: 72, priority: 'Normaali', summary: 'Kysyy onko käytettyä rengassarjaa saatavilla 205/55R16 kokoon. Haluaa edullisen vaihtoehdon.' },
+  { name: 'Timo Hakkarainen', number: null, minsAgo: 89, priority: 'Normaali', summary: 'Pyytää katsastusvalmisteluaikaa seuraavalle viikolle. BMW 3-sarja 2016. Mainitsee että takavalo saattaa olla rikki.' },
+  { name: 'Aino Nieminen', number: null, minsAgo: 103, priority: 'Normaali', summary: 'Soitti kysyäkseen auton noutamisesta. Sanoo auton olevan jo valmiina. Pyytää vahvistusta.' },
 ];
 
 let newMessage = null;
 
-function formatTime(minsAgo) {
-  if (minsAgo < 60) return minsAgo + ' min sitten';
-  const h = Math.floor(minsAgo / 60);
-  const m = minsAgo % 60;
-  return h + ' h ' + (m > 0 ? m + ' min ' : '') + 'sitten';
+function formatTime(m) {
+  if (m < 60) return m + ' min sitten';
+  const h = Math.floor(m/60), s = m%60;
+  return h + ' h ' + (s>0 ? s+' min ' : '') + 'sitten';
 }
 
 function buildInbox() {
   const list = $('inbox-list');
   list.innerHTML = '';
-
-  // Combine demo + new message, sort: urgent first, then by time
   let all = [...demoMessages];
-  if (newMessage) {
-    all.push({ ...newMessage, minsAgo: 0, new: true });
-  }
-  all.sort((a, b) => {
-    const ap = a.priority === 'Kiireellinen' ? 0 : 1;
-    const bp = b.priority === 'Kiireellinen' ? 0 : 1;
-    if (ap !== bp) return ap - bp;
-    return a.minsAgo - b.minsAgo;
+  if (newMessage) all.push({ ...newMessage, minsAgo: 0, new: true });
+  all.sort((a,b) => {
+    const ap = a.priority==='Kiireellinen'?0:1, bp = b.priority==='Kiireellinen'?0:1;
+    if (ap!==bp) return ap-bp;
+    return a.minsAgo-b.minsAgo;
   });
-
   $('inbox-count').textContent = all.length;
-
   all.forEach(msg => {
     const card = document.createElement('div');
-    card.className = 'msg-card' + (msg.priority === 'Kiireellinen' ? ' urgent' : '') + (msg.new ? ' new-msg' : '');
-    const displayName = msg.name || msg.number || 'Tuntematon';
-    card.innerHTML = `
-      <div class="msg-top">
-        <div class="msg-name">${displayName}</div>
-        <div class="msg-time">${formatTime(msg.minsAgo)}</div>
-      </div>
-      <div class="msg-summary">${msg.summary}</div>
-      <div class="msg-badges">
-        <span class="badge ${msg.priority === 'Kiireellinen' ? 'urgent' : 'normal'}">${msg.priority}</span>
-        ${msg.new ? '<span class="badge new">Uusi</span>' : ''}
-      </div>
-    `;
+    card.className = 'msg-card' + (msg.priority==='Kiireellinen'?' urgent':'') + (msg.new?' new-msg':'');
+    card.innerHTML = `<div class="msg-top"><div class="msg-name">${msg.name||msg.number||'Tuntematon'}</div><div class="msg-time">${formatTime(msg.minsAgo)}</div></div><div class="msg-summary">${msg.summary}</div><div class="msg-badges"><span class="badge ${msg.priority==='Kiireellinen'?'urgent':'normal'}">${msg.priority}</span>${msg.new?'<span class="badge new">Uusi</span>':''}</div>`;
     list.appendChild(card);
   });
 }
 
-// ── CALL FLOW ──
 $('btn-call').addEventListener('click', () => {
   show('sc-calling');
   const stat = $('calling-status');
@@ -235,89 +219,85 @@ $('btn-call').addEventListener('click', () => {
   setTimeout(() => show('sc-vm'), 4400);
 });
 
-// ── RECORDING ──
-let mediaRecorder = null, audioChunks = [], stream = null;
-let timerInterval = null, timerSecs = 0, recordedMime = '';
+let mediaRecorder=null, audioChunks=[], stream=null;
+let timerInterval=null, timerSecs=0, recordedMime='';
 
 function startTimer() {
-  timerSecs = 0; $('rec-timer').textContent = '0:00';
-  timerInterval = setInterval(() => {
-    timerSecs++;
-    $('rec-timer').textContent = Math.floor(timerSecs/60)+':'+String(timerSecs%60).padStart(2,'0');
-  }, 1000);
+  timerSecs=0; $('rec-timer').textContent='0:00';
+  timerInterval=setInterval(()=>{ timerSecs++; $('rec-timer').textContent=Math.floor(timerSecs/60)+':'+String(timerSecs%60).padStart(2,'0'); },1000);
 }
 function stopTimer() { clearInterval(timerInterval); }
 function showWarn(m) { const w=$('warn'); w.style.display='block'; w.textContent=m; }
 
 $('btn-start').addEventListener('click', async () => {
   $('warn').style.display='none';
-  try { stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false }); }
+  try { stream = await navigator.mediaDevices.getUserMedia({ audio:true, video:false }); }
   catch(e) { showWarn('Salli mikrofoni: Asetukset → Safari → Mikrofoni → salli tälle sivustolle.'); return; }
-  audioChunks = [];
-  const formats = ['audio/mp4;codecs=mp4a','audio/mp4','audio/aac','audio/webm;codecs=opus','audio/webm',''];
-  const fmt = formats.find(f => f==='' || MediaRecorder.isTypeSupported(f)) || '';
-  try { mediaRecorder = fmt ? new MediaRecorder(stream,{mimeType:fmt}) : new MediaRecorder(stream); }
-  catch(e) { mediaRecorder = new MediaRecorder(stream); }
-  recordedMime = mediaRecorder.mimeType || 'audio/webm';
-  mediaRecorder.ondataavailable = e => { if(e.data&&e.data.size>0) audioChunks.push(e.data); };
+  audioChunks=[];
+  const formats=['audio/mp4;codecs=mp4a','audio/mp4','audio/aac','audio/webm;codecs=opus','audio/webm',''];
+  const fmt=formats.find(f=>f===''||MediaRecorder.isTypeSupported(f))||'';
+  try { mediaRecorder=fmt?new MediaRecorder(stream,{mimeType:fmt}):new MediaRecorder(stream); }
+  catch(e) { mediaRecorder=new MediaRecorder(stream); }
+  recordedMime=mediaRecorder.mimeType||'audio/webm';
+  mediaRecorder.ondataavailable=e=>{ if(e.data&&e.data.size>0) audioChunks.push(e.data); };
   mediaRecorder.start(500);
   startTimer();
-  $('btn-start').disabled = true;
-  $('btn-stop').disabled = false;
-  $('rec-hint').textContent = 'Puhu rauhallisesti...';
+  $('btn-start').disabled=true;
+  $('btn-stop').disabled=false;
+  $('rec-hint').textContent='Puhu rauhallisesti...';
 });
 
 $('btn-stop').addEventListener('click', async () => {
-  $('btn-stop').disabled = true;
+  $('btn-stop').disabled=true;
   stopTimer();
-  await new Promise(resolve => { mediaRecorder.onstop=resolve; if(mediaRecorder.state!=='inactive') mediaRecorder.stop(); else resolve(); });
+  await new Promise(resolve=>{ mediaRecorder.onstop=resolve; if(mediaRecorder.state!=='inactive') mediaRecorder.stop(); else resolve(); });
   if(stream) { stream.getTracks().forEach(t=>t.stop()); stream=null; }
-  const totalBytes = audioChunks.reduce((s,c)=>s+c.size,0);
+  const totalBytes=audioChunks.reduce((s,c)=>s+c.size,0);
   if(totalBytes<500) {
     showWarn('Nauhoitus oli liian lyhyt. Paina Aloita ja puhu pidempään.');
     $('btn-start').disabled=false; $('rec-timer').textContent=''; $('rec-hint').textContent='Paina nappia ja aloita puhuminen'; return;
   }
   show('sc-proc'); $('proc-label').textContent='Litteroidaan Whisperillä...';
   try {
-    const blob = new Blob(audioChunks,{type:recordedMime});
-    const base64 = await new Promise((res,rej)=>{ const r=new FileReader(); r.onloadend=()=>res(r.result.split(',')[1]); r.onerror=rej; r.readAsDataURL(blob); });
+    const blob=new Blob(audioChunks,{type:recordedMime});
+    const base64=await new Promise((res,rej)=>{ const r=new FileReader(); r.onloadend=()=>res(r.result.split(',')[1]); r.onerror=rej; r.readAsDataURL(blob); });
     $('proc-label').textContent='Analysoidaan viestiä...';
-    const resp = await fetch(WORKER,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({audio_base64:base64,mime_type:recordedMime})});
-    const result = await resp.json();
+    const resp=await fetch(WORKER,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({audio_base64:base64,mime_type:recordedMime})});
+    const result=await resp.json();
     if(result.error) throw new Error(result.error);
-    newMessage = { name: null, number: 'Demo-asiakas', priority: result.priority, summary: result.summary, transcript: result.transcript, sms: result.sms };
+    newMessage={ name:null, number:'Demo-asiakas', priority:result.priority, summary:result.summary };
     renderResult(result);
   } catch(e) {
-    const fallback = {transcript:'—',priority:'Normaali',summary:'Virhe: '+e.message,sms:['Hei! Soitan sinulle pian. -Juhani','Hei! Milloin sopii soittaa? -Juhani','Hei! Lähetä tekstiä niin sovitaan. -Juhani']};
-    newMessage = { name: null, number: 'Demo-asiakas', priority: fallback.priority, summary: fallback.summary };
-    renderResult(fallback);
+    const fb={transcript:'—',priority:'Normaali',summary:'Virhe: '+e.message,analysis:'',sms:['Hei! Soitan sinulle pian. -Juhani','Hei! Milloin sopii soittaa? -Juhani','Hei! Lähetä tekstiä niin sovitaan. -Juhani']};
+    newMessage={ name:null, number:'Demo-asiakas', priority:fb.priority, summary:fb.summary };
+    renderResult(fb);
   }
   show('sc-result');
 });
 
-function toggleAnalysis() {
-  const card = $('r-analysis-card');
-  const btn = $('btn-toggle-analysis');
-  const visible = card.style.display !== 'none';
-  card.style.display = visible ? 'none' : 'block';
-  btn.textContent = visible ? '▶ Näytä vika-analyysi' : '▼ Piilota vika-analyysi';
-}
+$('btn-analysis').addEventListener('click', () => {
+  const card=$('r-analysis-card');
+  const btn=$('btn-analysis');
+  const open=card.style.display!=='none';
+  card.style.display=open?'none':'block';
+  btn.textContent=open?'▶ Näytä vika-analyysi':'▼ Piilota vika-analyysi';
+});
 
 function renderResult(r) {
-  const urgent = (r.priority||'').includes('Kiireellinen');
-  const badge = $('r-badge');
-  badge.textContent = r.priority||'Normaali';
-  badge.style.background = urgent?'#FCEBEB':'#FAEEDA';
-  badge.style.color = urgent?'#791F1F':'#633806';
-  $('r-summary').textContent = r.summary||'—';
-  $('r-transcript').textContent = r.transcript||'—';
-  if (r.analysis) {
-    $('r-analysis').textContent = r.analysis;
-    $('r-analysis-card').style.display = 'none';
-    $('btn-toggle-analysis').style.display = 'block';
-    $('btn-toggle-analysis').textContent = '▶ Näytä vika-analyysi';
+  const urgent=(r.priority||'').includes('Kiireellinen');
+  const badge=$('r-badge');
+  badge.textContent=r.priority||'Normaali';
+  badge.style.background=urgent?'#FCEBEB':'#FAEEDA';
+  badge.style.color=urgent?'#791F1F':'#633806';
+  $('r-summary').textContent=r.summary||'—';
+  $('r-transcript').textContent=r.transcript||'—';
+  if(r.analysis) {
+    $('r-analysis').textContent=r.analysis;
+    $('r-analysis-card').style.display='none';
+    $('btn-analysis').style.display='block';
+    $('btn-analysis').textContent='▶ Näytä vika-analyysi';
   } else {
-    $('btn-toggle-analysis').style.display = 'none';
+    $('btn-analysis').style.display='none';
   }
   const sd=$('r-sms'); sd.innerHTML=''; $('r-sent').style.display='none';
   (r.sms||[]).forEach(s=>{
@@ -335,11 +315,7 @@ $('btn-again').addEventListener('click', () => {
   show('sc-home');
 });
 
-$('btn-inbox').addEventListener('click', () => {
-  buildInbox();
-  show('sc-inbox');
-});
-
+$('btn-inbox').addEventListener('click', () => { buildInbox(); show('sc-inbox'); });
 $('btn-inbox-back').addEventListener('click', () => show('sc-result'));
 </script>
 </body>
