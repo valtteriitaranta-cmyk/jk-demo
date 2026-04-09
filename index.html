@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>JK Autokorjaamo</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0f0ec; min-height: 100vh; display: flex; align-items: flex-start; justify-content: center; padding: 24px 12px 48px; }
+.phone { background: #fff; border-radius: 44px; border: 1px solid #ddd; width: 100%; max-width: 390px; overflow: hidden; min-height: 780px; display: flex; flex-direction: column; }
+.statusbar { padding: 16px 28px 6px; display: flex; justify-content: space-between; flex-shrink: 0; }
+.st { font-size: 14px; font-weight: 600; color: #111; }
+.si { font-size: 12px; color: #888; }
+.screen { flex: 1; display: none; flex-direction: column; align-items: center; padding: 28px 24px 36px; }
+.screen.active { display: flex; }
+.avatar { width: 96px; height: 96px; border-radius: 50%; background: #E1F5EE; display: flex; align-items: center; justify-content: center; margin-bottom: 14px; }
+.av { font-size: 30px; font-weight: 700; color: #085041; }
+.bizname { font-size: 22px; font-weight: 700; color: #111; text-align: center; }
+.biztype { font-size: 14px; color: #888; margin-top: 4px; }
+.divider { width: 100%; height: 1px; background: #eee; margin: 24px 0; }
+.callbtn { width: 80px; height: 80px; border-radius: 50%; background: #1D9E75; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; transition: transform 0.1s, background 0.15s; }
+.callbtn:active { transform: scale(0.93); background: #0F6E56; }
+.call-label { font-size: 14px; color: #888; }
+.pulse-wrap { position: relative; width: 96px; height: 96px; display: flex; align-items: center; justify-content: center; margin-bottom: 14px; }
+.pulse-ring { position: absolute; width: 96px; height: 96px; border-radius: 50%; border: 2px solid #1D9E75; animation: pulse 1.5s ease-out infinite; }
+@keyframes pulse { 0% { transform: scale(0.95); opacity: 0.7; } 100% { transform: scale(1.65); opacity: 0; } }
+.calling-name { font-size: 22px; font-weight: 700; color: #111; margin-bottom: 6px; }
+.calling-status { font-size: 14px; color: #888; }
+.vm-bubble { width: 100%; background: #f5f5f0; border-radius: 4px 18px 18px 18px; padding: 16px 18px; margin-bottom: 24px; }
+.vm-from { font-size: 12px; color: #aaa; margin-bottom: 6px; }
+.vm-text { font-size: 15px; color: #222; line-height: 1.65; }
+.rec-wrap { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.recbtn { width: 80px; height: 80px; border-radius: 50%; background: #E24B4A; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.15s, transform 0.1s; flex-shrink: 0; }
+.recbtn:active { transform: scale(0.93); }
+.recbtn.on { background: #8B0000; }
+.recbtn.on .mic-icon { animation: micropulse 1s ease-in-out infinite; }
+@keyframes micropulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+.rec-ring { position: absolute; width: 80px; height: 80px; border-radius: 50%; border: 2px solid #E24B4A; display: none; }
+.recbtn.on + .rec-ring { display: block; animation: recpulse 1.2s ease-out infinite; }
+@keyframes recpulse { 0% { transform: scale(1); opacity: 0.7; } 100% { transform: scale(1.6); opacity: 0; } }
+.rec-btn-wrap { position: relative; display: flex; align-items: center; justify-content: center; width: 80px; height: 80px; }
+.rec-label { font-size: 13px; color: #666; text-align: center; font-weight: 500; }
+.rec-timer { font-size: 28px; font-weight: 700; color: #111; letter-spacing: 0.04em; min-height: 36px; }
+.rec-hint { font-size: 12px; color: #aaa; text-align: center; line-height: 1.5; max-width: 240px; }
+.sendbtn { width: 100%; padding: 15px; border-radius: 26px; background: #1D9E75; border: none; color: #fff; font-size: 16px; font-weight: 600; cursor: pointer; transition: background 0.15s; margin-top: 4px; }
+.sendbtn:disabled { background: #e0e0e0; color: #aaa; cursor: default; }
+.sendbtn:not(:disabled):active { background: #0F6E56; }
+.warn { width: 100%; font-size: 13px; color: #A32D2D; background: #FCEBEB; border-radius: 10px; padding: 10px 14px; text-align: center; display: none; line-height: 1.5; }
+.spinner { width: 40px; height: 40px; border: 3px solid #e0e0e0; border-top-color: #1D9E75; border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 16px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.proc-label { font-size: 15px; color: #888; text-align: center; line-height: 1.6; }
+.result-screen { align-items: flex-start; }
+.result-header { width: 100%; display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+.mini-avatar { width: 44px; height: 44px; border-radius: 50%; background: #E1F5EE; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.mini-av { font-size: 15px; font-weight: 700; color: #085041; }
+.header-name { font-size: 15px; font-weight: 600; color: #111; }
+.header-time { font-size: 12px; color: #aaa; }
+.priority-badge { display: inline-block; font-size: 12px; font-weight: 600; padding: 4px 14px; border-radius: 12px; margin-bottom: 14px; }
+.rcard { width: 100%; background: #fff; border: 1px solid #eee; border-radius: 16px; padding: 14px 16px; margin-bottom: 12px; }
+.rcard-label { font-size: 11px; color: #bbb; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 8px; }
+.rcard-body { font-size: 14px; color: #222; line-height: 1.7; }
+.rcard-body.muted { font-style: italic; color: #888; font-size: 13px; }
+.sms-title { font-size: 11px; color: #bbb; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 10px; width: 100%; }
+.sms-opt { width: 100%; background: #fff; border: 1px solid #eee; border-radius: 12px; padding: 13px 15px; margin-bottom: 9px; cursor: pointer; text-align: left; font-size: 14px; color: #222; line-height: 1.5; font-family: inherit; transition: all 0.15s; }
+.sms-opt:active, .sms-opt.chosen { border-color: #1D9E75; background: #E1F5EE; color: #085041; }
+.sent-confirm { font-size: 13px; color: #0F6E56; font-weight: 600; text-align: center; margin-top: 6px; width: 100%; }
+.again-btn { width: 100%; padding: 13px; border-radius: 26px; background: #f0f0ec; border: 1px solid #ddd; color: #555; font-size: 15px; font-weight: 500; cursor: pointer; margin-top: 16px; }
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="statusbar"><span class="st" id="clock">9:41</span><span class="si">▲▲▲ 100%</span></div>
+
+  <div class="screen active" id="sc-home">
+    <div class="avatar"><span class="av">JK</span></div>
+    <div class="bizname">Juhani Korhonen</div>
+    <div class="biztype">JK Autokorjaamo</div>
+    <div class="divider"></div>
+    <button class="callbtn" id="btn-call">
+      <svg width="34" height="34" viewBox="0 0 24 24" fill="none"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C9.6 21 3 14.4 3 6c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1L6.6 10.8z" fill="#fff"/></svg>
+    </button>
+    <div class="call-label">Soita Juhanille</div>
+  </div>
+
+  <div class="screen" id="sc-calling">
+    <div class="pulse-wrap"><div class="pulse-ring"></div><div class="avatar" style="margin:0;"><span class="av">JK</span></div></div>
+    <div class="calling-name">Juhani Korhonen</div>
+    <div class="calling-status" id="calling-status">Yhdistetään...</div>
+  </div>
+
+  <div class="screen" id="sc-vm">
+    <div class="vm-bubble">
+      <div class="vm-from">Juhani Korhonen — assistentti</div>
+      <div class="vm-text">Hei! Olen juuri töissä enkä pysty vastaamaan. Kerro asiasi — otan sinuun yhteyttä heti kun voin!</div>
+    </div>
+    <div class="rec-wrap">
+      <div class="rec-btn-wrap">
+        <button class="recbtn" id="btn-rec">
+          <svg class="mic-icon" width="30" height="30" viewBox="0 0 24 24" fill="none"><rect x="9" y="2" width="6" height="11" rx="3" fill="white"/><path d="M5 11a7 7 0 0014 0" stroke="white" stroke-width="2" stroke-linecap="round" fill="none"/><line x1="12" y1="18" x2="12" y2="22" stroke="white" stroke-width="2" stroke-linecap="round"/><line x1="9" y1="22" x2="15" y2="22" stroke="white" stroke-width="2" stroke-linecap="round"/></svg>
+        </button>
+        <div class="rec-ring"></div>
+      </div>
+      <div class="rec-label" id="rec-label">Paina ja puhu suomeksi</div>
+      <div class="rec-timer" id="rec-timer"></div>
+      <div class="rec-hint" id="rec-hint">Puhu rauhallisesti. Paina uudelleen kun olet valmis.</div>
+      <button class="sendbtn" id="btn-send" disabled>Lähetä viesti Juhanille</button>
+      <div class="warn" id="warn"></div>
+    </div>
+  </div>
+
+  <div class="screen" id="sc-proc" style="justify-content:center; gap: 0;">
+    <div class="spinner"></div>
+    <div class="proc-label" id="proc-label">Litteroidaan Whisperillä...</div>
+  </div>
+
+  <div class="screen result-screen" id="sc-result">
+    <div class="result-header">
+      <div class="mini-avatar"><span class="mini-av">JK</span></div>
+      <div><div class="header-name">Juhani Korhonen</div><div class="header-time">Uusi asiakasviesti — juuri nyt</div></div>
+    </div>
+    <div class="priority-badge" id="r-badge"></div>
+    <div class="rcard"><div class="rcard-label">AI-tiivistelmä</div><div class="rcard-body" id="r-summary"></div></div>
+    <div class="rcard"><div class="rcard-label">Alkuperäinen puheviesti</div><div class="rcard-body muted" id="r-transcript"></div></div>
+    <div class="sms-title">Vastaa yhdellä napilla</div>
+    <div id="r-sms"></div>
+    <div class="sent-confirm" id="r-sent" style="display:none;">Tekstiviesti lähetetty!</div>
+    <button class="again-btn" id="btn-again">Aloita alusta</button>
+  </div>
+</div>
+
+<script>
+const WORKER = 'https://jk-proxy.valtteri-itaranta.workers.dev';
+const $ = id => document.getElementById(id);
+function show(id) { document.querySelectorAll('.screen').forEach(s => s.classList.remove('active')); $(id).classList.add('active'); }
+(function tick() { const n = new Date(); $('clock').textContent = n.getHours()+':'+String(n.getMinutes()).padStart(2,'0'); setTimeout(tick,10000); })();
+
+$('btn-call').addEventListener('click', () => {
+  show('sc-calling');
+  const stat = $('calling-status');
+  setTimeout(() => stat.textContent='Ei vastaa...',1800);
+  setTimeout(() => stat.textContent='Ääniviestiassistentti vastaa',3400);
+  setTimeout(() => show('sc-vm'),4400);
+});
+
+let mediaRecorder = null;
+let audioChunks = [];
+let stream = null;
+let isRec = false;
+let timerInterval = null;
+let timerSecs = 0;
+let recordedMime = '';
+
+function startTimer() {
+  timerSecs = 0; $('rec-timer').textContent = '0:00';
+  timerInterval = setInterval(() => {
+    timerSecs++;
+    $('rec-timer').textContent = Math.floor(timerSecs/60)+':'+String(timerSecs%60).padStart(2,'0');
+  }, 1000);
+}
+function stopTimer() { clearInterval(timerInterval); }
+function showWarn(m) { const w=$('warn'); w.style.display='block'; w.textContent=m; }
+
+$('btn-rec').addEventListener('click', async () => {
+  if (!isRec) {
+    $('warn').style.display='none';
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    } catch(e) {
+      showWarn('Salli mikrofoni: Asetukset → Safari → Mikrofoni → valtteriitaranta-cmyk.github.io → Salli');
+      return;
+    }
+
+    audioChunks = [];
+    isRec = true;
+    $('btn-rec').classList.add('on');
+    $('rec-label').textContent = 'Nauhoitetaan...';
+    $('rec-hint').textContent = 'Paina uudelleen kun olet lopettanut.';
+    $('btn-send').disabled = true;
+    startTimer();
+
+    // Best format for iOS Safari: audio/mp4
+    const formats = ['audio/mp4;codecs=mp4a', 'audio/mp4', 'audio/aac', 'audio/webm;codecs=opus', 'audio/webm', ''];
+    recordedMime = formats.find(f => f === '' || MediaRecorder.isTypeSupported(f)) || '';
+
+    try {
+      mediaRecorder = recordedMime
+        ? new MediaRecorder(stream, { mimeType: recordedMime })
+        : new MediaRecorder(stream);
+    } catch(e) {
+      mediaRecorder = new MediaRecorder(stream);
+      recordedMime = '';
+    }
+
+    // Use actual mimeType from recorder
+    recordedMime = mediaRecorder.mimeType || recordedMime || 'audio/webm';
+
+    mediaRecorder.ondataavailable = e => {
+      if (e.data && e.data.size > 0) audioChunks.push(e.data);
+    };
+    // Collect in 500ms chunks for reliability
+    mediaRecorder.start(500);
+
+  } else {
+    // Stop
+    isRec = false;
+    stopTimer();
+    $('btn-rec').classList.remove('on');
+    $('rec-label').textContent = 'Nauhoitus valmis';
+    $('rec-hint').textContent = timerSecs + ' sekuntia tallennettu.';
+
+    await new Promise(resolve => {
+      mediaRecorder.onstop = resolve;
+      if (mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+      else resolve();
+    });
+    stream.getTracks().forEach(t => t.stop());
+    stream = null;
+
+    const totalBytes = audioChunks.reduce((s, c) => s + c.size, 0);
+    if (totalBytes < 500) {
+      showWarn('Nauhoitus epäonnistui tai oli liian lyhyt. Yritä uudelleen.');
+      $('rec-label').textContent = 'Paina ja puhu suomeksi';
+      $('rec-timer').textContent = '';
+      $('rec-hint').textContent = 'Puhu rauhallisesti. Paina uudelleen kun olet valmis.';
+      return;
+    }
+    $('btn-send').disabled = false;
+  }
+});
+
+$('btn-send').addEventListener('click', async () => {
+  if (!audioChunks.length) { showWarn('Ei nauhoitusta.'); return; }
+  show('sc-proc');
+  $('proc-label').textContent = 'Litteroidaan Whisperillä...';
+
+  try {
+    const blob = new Blob(audioChunks, { type: recordedMime });
+    const base64 = await new Promise((res, rej) => {
+      const r = new FileReader();
+      r.onloadend = () => res(r.result.split(',')[1]);
+      r.onerror = rej;
+      r.readAsDataURL(blob);
+    });
+
+    $('proc-label').textContent = 'Analysoidaan viestiä...';
+
+    const resp = await fetch(WORKER, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ audio_base64: base64, mime_type: recordedMime })
+    });
+
+    const result = await resp.json();
+    if (result.error) throw new Error(result.error);
+    renderResult(result);
+
+  } catch(e) {
+    renderResult({
+      transcript: '—',
+      priority: 'Normaali',
+      summary: 'Virhe: ' + e.message,
+      sms: ['Hei! Soitan sinulle pian. -Juhani','Hei! Milloin sopii soittaa? -Juhani','Hei! Lähetä tekstiä niin sovitaan. -Juhani']
+    });
+  }
+  show('sc-result');
+});
+
+function renderResult(r) {
+  const urgent = (r.priority||'').includes('Kiireellinen');
+  const badge = $('r-badge');
+  badge.textContent = r.priority || 'Normaali';
+  badge.style.background = urgent ? '#FCEBEB' : '#FAEEDA';
+  badge.style.color = urgent ? '#791F1F' : '#633806';
+  $('r-summary').textContent = r.summary || '—';
+  $('r-transcript').textContent = r.transcript || '—';
+  const sd = $('r-sms'); sd.innerHTML = ''; $('r-sent').style.display='none';
+  (r.sms||[]).forEach(s => {
+    const b = document.createElement('button'); b.className='sms-opt'; b.textContent=s;
+    b.addEventListener('click', () => {
+      document.querySelectorAll('.sms-opt').forEach(x => x.classList.remove('chosen'));
+      b.classList.add('chosen'); $('r-sent').style.display='block';
+    });
+    sd.appendChild(b);
+  });
+}
+
+$('btn-again').addEventListener('click', () => {
+  audioChunks=[]; recordedMime='';
+  $('btn-send').disabled=true;
+  $('rec-label').textContent='Paina ja puhu suomeksi';
+  $('rec-timer').textContent='';
+  $('rec-hint').textContent='Puhu rauhallisesti. Paina uudelleen kun olet valmis.';
+  $('warn').style.display='none';
+  show('sc-home');
+});
+</script>
+</body>
+</html>
