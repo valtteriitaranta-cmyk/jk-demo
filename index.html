@@ -136,6 +136,11 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; b
     <div class="priority-badge" id="r-badge"></div>
     <div class="rcard"><div class="rcard-label">AI-tiivistelmä</div><div class="rcard-body" id="r-summary"></div></div>
     <div class="rcard"><div class="rcard-label">Alkuperäinen puheviesti</div><div class="rcard-body muted" id="r-transcript"></div></div>
+    <div class="rcard" id="r-analysis-card" style="display:none;">
+      <div class="rcard-label">AI-vika-analyysi</div>
+      <div class="rcard-body muted" id="r-analysis"></div>
+    </div>
+    <button id="btn-toggle-analysis" style="background:none;border:none;font-size:12px;color:#aaa;cursor:pointer;align-self:flex-start;padding:0 0 10px 2px;display:none;" onclick="toggleAnalysis()">▶ Näytä vika-analyysi</button>
     <div class="sms-title">Vastaa yhdellä napilla</div>
     <div id="r-sms"></div>
     <div class="sent-confirm" id="r-sent" style="display:none;">Tekstiviesti lähetetty!</div>
@@ -290,6 +295,14 @@ $('btn-stop').addEventListener('click', async () => {
   show('sc-result');
 });
 
+function toggleAnalysis() {
+  const card = $('r-analysis-card');
+  const btn = $('btn-toggle-analysis');
+  const visible = card.style.display !== 'none';
+  card.style.display = visible ? 'none' : 'block';
+  btn.textContent = visible ? '▶ Näytä vika-analyysi' : '▼ Piilota vika-analyysi';
+}
+
 function renderResult(r) {
   const urgent = (r.priority||'').includes('Kiireellinen');
   const badge = $('r-badge');
@@ -298,6 +311,14 @@ function renderResult(r) {
   badge.style.color = urgent?'#791F1F':'#633806';
   $('r-summary').textContent = r.summary||'—';
   $('r-transcript').textContent = r.transcript||'—';
+  if (r.analysis) {
+    $('r-analysis').textContent = r.analysis;
+    $('r-analysis-card').style.display = 'none';
+    $('btn-toggle-analysis').style.display = 'block';
+    $('btn-toggle-analysis').textContent = '▶ Näytä vika-analyysi';
+  } else {
+    $('btn-toggle-analysis').style.display = 'none';
+  }
   const sd=$('r-sms'); sd.innerHTML=''; $('r-sent').style.display='none';
   (r.sms||[]).forEach(s=>{
     const b=document.createElement('button'); b.className='sms-opt'; b.textContent=s;
